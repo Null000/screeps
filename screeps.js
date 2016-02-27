@@ -102,8 +102,6 @@ module.exports.loop = function () {
             role: role
         });
         counter++;
-    } else {
-        //console.log("can't make more creeps");
     }
 
 
