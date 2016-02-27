@@ -1,26 +1,38 @@
 var harvester = require('harvester');
 var routeCreep = require('routeCreep');
 
-var counter = 1;
+var counter = 0;
 
 var worker = ["builder", [CARRY, WORK, MOVE]];
-var attacker = ["attacker", [ATTACK, MOVE]];
+var attacker = ["attacker", [MOVE,ATTACK]];
 
+var died = undefined;
 
 module.exports.loop = function () {
-    //game.spawns.spawn1.createcreep( [work, carry, move], 'worker1' );
-    var spawn1 = game.spawns.spawn1;
-    var nextcreep = worker;
-    if (counter % 3 == 0) {
-        nextcreep = attacker;
-    }
-    var body = nextcreep[1];
+    //Game.spawns.Spawn1.createCreep( [WORK, CARRY, MOVE], 'Worker1' );
+    var spawn1 = Game.spawns.Spawn1;
 
-    if (spawn1.cancreatecreep(body) == 0) {
-        var creepname = "slave" + counter;
+    if (!spawn1) {
+        if (!died) {
+            died = Game.time;
+        }
+
+        console.log("died at " + died);
+        return;
+    }
+
+    var nextCreep = worker;
+    if (counter >= 4) {
+        nextCreep = attacker;
+    }
+    var body = nextCreep[1];
+    var role = nextCreep[0];
+
+    if (spawn1.canCreateCreep(body) == 0) {
+        var creepName = role + " " + counter;
         console.log("spawning");
-        spawn1.createcreep(body, creepname, {
-            role: nextcreep[0]
+        spawn1.createCreep(body, creepName, {
+            role: role
         });
         counter++;
     } else {
@@ -28,35 +40,40 @@ module.exports.loop = function () {
     }
 
 
-    for (var name in game.creeps) {
-        var creep = game.creeps[name];
-
-        var enemies = creep.room.find(find_hostile_creeps);
+    for (var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
 
 
         if (creep.memory.role == 'harvester') {
             harvester(creep);
         } else if (creep.memory.role == 'builder') {
-            var targets = creep.room.find(find_construction_sites);
+            var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
             if (targets.length) {
                 if (creep.carry.energy == 0) {
-                    if (game.spawns.spawn1.transferenergy(creep) == err_not_in_range) {
-                        creep.moveto(game.spawns.spawn1);
+                    if (Game.spawns.Spawn1.transferEnergy(creep) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(Game.spawns.Spawn1);
                     }
                 }
                 else {
-                    if (creep.build(targets[0]) == err_not_in_range) {
-                        creep.moveto(targets[0]);
+                    if (creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
+                        creep.moveTo(targets[0]);
                     }
                 }
             } else {
                 harvester(creep);
             }
         } else if (creep.memory.role == 'attacker') {
-            if (enemies.length) {
-                if (creep.attack(enemies[0]) == err_not_in_range) {
-                    creep.moveto(enemies[0]);
+            var enemy = enemies[0];
+            if (enemy.hits > 1000) {
+                enemy = enemies[1];
+            }
+            if (enemy) {
+                if (enemy && creep.attack(enemy) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(enemy);
                 }
+            } else {
+                creep.moveTo(25,25);
             }
         }
     }
