@@ -1,12 +1,11 @@
 function harvesterAction(creep) {
-    if(creep.carry.energy < creep.carryCapacity) {
+    if (creep.carry.energy < creep.carryCapacity) {
         var sources = creep.room.find(FIND_SOURCES);
-        if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+        if (creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
             creep.moveTo(sources[0]);
         }
-    }
-    else {
-        if(creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+    } else {
+        if (creep.transfer(Game.spawns.Spawn1, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             creep.moveTo(Game.spawns.Spawn1);
         }
     }
@@ -32,11 +31,36 @@ function builderAction(creep) {
 
 function attackerAction(creep, enemy) {
     if (enemy) {
-        if (enemy && creep.attack(enemy) == ERR_NOT_IN_RANGE) {
+        if (creep.attack(enemy) == ERR_NOT_IN_RANGE) {
             creep.moveTo(enemy);
         }
     } else {
-        creep.moveTo(25,25);
+        creep.moveTo(25, 25);
+    }
+}
+
+function archerAction(creep, enemy) {
+    if (enemy) {
+        if (creep.rangedAttack(enemy) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(enemy);
+        }
+    } else {
+        creep.moveTo(25, 25);
+    }
+}
+
+function healerAction(creep) {
+    var target = creep.pos.findClosestByRange(FIND_MY_CREEPS, {
+        filter: function (object) {
+            return object.hits < object.hitsMax;
+        }
+    });
+    if (target) {
+        if (creep.heal(target) == ERR_NOT_IN_RANGE) {
+            creep.moveTo(target);
+        }
+    } else {
+        creep.moveTo(25, 25);
     }
 }
 
@@ -44,14 +68,15 @@ function attackerAction(creep, enemy) {
 var counter = 0;
 
 var worker = ["builder", [CARRY, WORK, MOVE]];
-var attacker = ["attacker", [MOVE,ATTACK]];
+var attacker = ["attacker", [MOVE, ATTACK]];
 var archer = ["archer", [MOVE, RANGED_ATTACK]];
+var healer = ["healer", [MOVE, HEAL]];
 
 var died = undefined;
 
+var plan = [attacker, archer, attacker, healer];
 
 module.exports.loop = function () {
-    //Game.spawns.Spawn1.createCreep( [WORK, CARRY, MOVE], 'Worker1' );
     var spawn1 = Game.spawns.Spawn1;
 
     if (!spawn1) {
@@ -65,7 +90,7 @@ module.exports.loop = function () {
 
     var nextCreep = worker;
     if (counter >= 3) {
-        nextCreep = counter % 2 == 0 ? archer: attacker;
+        nextCreep = plan[(counter - 3) % plan.length];
     }
     var body = nextCreep[1];
     var role = nextCreep[0];
@@ -84,7 +109,9 @@ module.exports.loop = function () {
 
     for (var name in Game.creeps) {
         var creep = Game.creeps[name];
-        var enemies = creep.room.find(FIND_HOSTILE_CREEPS);
+        var enemies = creep.room.find(FIND_HOSTILE_CREEPS).filter(function (enemy) {
+            return enemy.hits < 1000;
+        });
 
 
         if (creep.memory.role == 'harvester') {
@@ -92,11 +119,15 @@ module.exports.loop = function () {
         } else if (creep.memory.role == 'builder') {
             builderAction(creep);
         } else if (creep.memory.role == 'attacker' || creep.memory.role == 'archer') {
-            var enemy = enemies[0];
-            if (enemy && enemy.hits > 1000) {
-                enemy = enemies[1];
+            var enemy = creep.pos.findClosestByRange(enemies);
+
+            if (creep.memory.role == 'attacker') {
+                attackerAction(creep, enemy);
+            } else {
+                archerAction(creep, enemy);
             }
-            attackerAction(creep, enemy);
+        } else if (creep.memory.role == "healer") {
+            healerAction(creep);
         }
     }
 };
