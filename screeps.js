@@ -70,19 +70,25 @@ var archer = ["archer", [MOVE, RANGED_ATTACK]];
 var healer = ["healer", [MOVE, HEAL]];
 
 var died = undefined;
+var previousCreepCount = {};
 
 var plan = [attacker, archer, attacker, archer, healer];
 
 module.exports.loop = function () {
     var spawn1 = Game.spawns.Spawn1;
+    var time = Game.time;
 
     if (!spawn1) {
         if (!died) {
-            died = Game.time;
+            died = time;
         }
 
         console.log("died at " + died);
         return;
+    }
+
+    if (time % 50 == 0) {
+        console.log(time);
     }
 
     var creepCount = {
@@ -99,7 +105,7 @@ module.exports.loop = function () {
 
         var creep = Game.creeps[name];
         var enemies = creep.room.find(FIND_HOSTILE_CREEPS).filter(function (enemy) {
-            return enemy.hits < 1000;
+            return enemy.hits < 5000;
         });
 
         var creepRole = creep.memory.role;
@@ -120,6 +126,11 @@ module.exports.loop = function () {
                 archerAction(creep, enemy);
             }
         }
+    }
+
+    if (!_.isEqual(creepCount, previousCreepCount)) {
+        console.log(JSON.stringify(creepCount));
+        previousCreepCount = creepCount;
     }
 
     var nextCreep = worker;
