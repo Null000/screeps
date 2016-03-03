@@ -11,7 +11,7 @@ function harvesterAction(creep) {
     }
 }
 
-function builderAction(creep) {
+function workerAction(creep) {
     var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
     if (targets.length) {
         if (creep.carry.energy == 0) {
@@ -64,17 +64,14 @@ function healerAction(creep) {
     }
 }
 
-
-var counter = 0;
-
-var worker = ["builder", [CARRY, WORK, MOVE]];
+var worker = ["worker", [CARRY, WORK, MOVE]];
 var attacker = ["attacker", [MOVE, ATTACK]];
 var archer = ["archer", [MOVE, RANGED_ATTACK]];
 var healer = ["healer", [MOVE, HEAL]];
 
 var died = undefined;
 
-var plan = [attacker, archer, attacker, healer];
+var plan = [attacker, archer, attacker, archer, healer];
 
 module.exports.loop = function () {
     var spawn1 = Game.spawns.Spawn1;
@@ -88,44 +85,54 @@ module.exports.loop = function () {
         return;
     }
 
-    var nextCreep = worker;
-    if (counter >= 3) {
-        nextCreep = plan[(counter - 3) % plan.length];
-    }
-    var body = nextCreep[1];
-    var role = nextCreep[0];
-
-    if (spawn1.canCreateCreep(body) == 0) {
-        var creepName = role + " " + counter;
-        console.log("spawning " + role);
-        spawn1.createCreep(body, creepName, {
-            role: role
-        });
-        counter++;
-    }
+    var creepCount = {
+        worker: 0,
+        attacker: 0,
+        archer: 0,
+        healer: 0
+    };
 
 
+    var totalCreeps = 0;
     for (var name in Game.creeps) {
+        totalCreeps++;
+
         var creep = Game.creeps[name];
         var enemies = creep.room.find(FIND_HOSTILE_CREEPS).filter(function (enemy) {
             return enemy.hits < 1000;
         });
 
+        var creepRole = creep.memory.role;
+        creepCount[creepRole]++;
 
-        if (creep.memory.role == 'harvester') {
+        if (creepRole == 'harvester') {
             harvesterAction(creep);
-        } else if (creep.memory.role == 'builder') {
-            builderAction(creep);
-        } else if (creep.memory.role == 'attacker' || creep.memory.role == 'archer') {
+        } else if (creepRole == 'worker') {
+            workerAction(creep);
+        } else if (creepRole == "healer") {
+            healerAction(creep);
+        } else {
             var enemy = creep.pos.findClosestByRange(enemies);
 
-            if (creep.memory.role == 'attacker') {
+            if (creepRole == 'attacker') {
                 attackerAction(creep, enemy);
             } else {
                 archerAction(creep, enemy);
             }
-        } else if (creep.memory.role == "healer") {
-            healerAction(creep);
         }
+    }
+
+    var nextCreep = worker;
+    if (creepCount.worker >= 3) {
+        nextCreep = plan[(totalCreeps - 3) % plan.length];
+    }
+    var body = nextCreep[1];
+    var role = nextCreep[0];
+
+    if (spawn1.canCreateCreep(body) == 0) {
+        console.log("spawning " + role);
+        spawn1.createCreep(body, null, {
+            role: role
+        });
     }
 };
