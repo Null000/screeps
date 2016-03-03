@@ -64,14 +64,16 @@ function healerAction(creep) {
     }
 }
 
-var worker = ["worker", [CARRY, WORK, MOVE]];
-var attacker = ["attacker", [MOVE, ATTACK]];
-var archer = ["archer", [MOVE, RANGED_ATTACK]];
+var worker1 = ["worker", [CARRY, WORK, MOVE]];
+var worker2 = ["worker", [WORK, CARRY, WORK, MOVE]];
+var attacker = ["attacker", [MOVE, ATTACK, MOVE, ATTACK]];
+var archer = ["archer", [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, RANGED_ATTACK]];
 var healer = ["healer", [MOVE, HEAL]];
 
 var died = undefined;
 var previousCreepCount = {};
 
+var plan0 = [worker1, worker2, worker2, attacker];
 var plan = [attacker, archer, attacker, archer, healer];
 
 module.exports.loop = function () {
@@ -128,13 +130,15 @@ module.exports.loop = function () {
         }
     }
 
-    if (!_.isEqual(creepCount, previousCreepCount)) {
+    if (previousCreepCount && !_.isEqual(creepCount, previousCreepCount)) {
         console.log(JSON.stringify(creepCount));
-        previousCreepCount = creepCount;
     }
+    previousCreepCount = creepCount;
 
-    var nextCreep = worker;
-    if (creepCount.worker >= 3) {
+    var nextCreep = worker2;
+    if (totalCreeps < plan0.length) {
+        nextCreep = plan0[totalCreeps];
+    } else if (creepCount.worker >= 4) {
         nextCreep = plan[(totalCreeps - 3) % plan.length];
     }
     var body = nextCreep[1];
